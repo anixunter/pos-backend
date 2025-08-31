@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'corsheaders',
     
     'core.apps.users',
+    'core.apps.common',
 ]
 
 REST_FRAMEWORK = {
@@ -69,6 +70,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+AUTH_USER_MODEL = "users.User"
 
 ROOT_URLCONF = 'core.urls'
 
