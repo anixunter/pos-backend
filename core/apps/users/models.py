@@ -8,7 +8,11 @@ from core.apps.common.models import (
 )
 
 class User(SoftDeleteModelMixin, TimeStampModelMixin, AuditModelMixin, AbstractUser):
-    role = models.CharField()
+    class RoleChoices(models.TextChoices):
+        ADMIN = 'Admin', 'Admin'
+        STAFF = 'Staff', 'Staff'
+        
+    role = models.CharField(choices=RoleChoices.choices, default=RoleChoices.STAFF)
 
     objects = UserManager()
 
@@ -17,3 +21,15 @@ class User(SoftDeleteModelMixin, TimeStampModelMixin, AuditModelMixin, AbstractU
 
     def __str__(self):
         return self.username
+
+
+class Customer(TimeStampModelMixin, AuditModelMixin):
+    name = models.CharField(max_length=200)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    address = models.TextField(blank=True)
+    loyalty_points = models.PositiveIntegerField(default=0)
+    outstanding_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    def __str__(self):
+        return self.name

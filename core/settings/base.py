@@ -46,8 +46,10 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'corsheaders',
     
-    'core.apps.users',
     'core.apps.common',
+    'core.apps.users',
+    'core.apps.products',
+    'core.apps.billing',
 ]
 
 REST_FRAMEWORK = {
