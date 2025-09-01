@@ -39,8 +39,7 @@ class Customer(TimeStampModelMixin, AuditModelMixin):
 class CustomerDeposit(models.Model):
     class PaymentMethodChoices(models.TextChoices):
         CASH = 'Cash', 'Cash'
-        CARD = 'Card', 'Card'
-        CREDIT = 'Credit', 'Credit'
+        ONLINE = 'Online', 'Online'
         
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='deposits')
     amount = models.DecimalField(max_digits=10, decimal_places=2)

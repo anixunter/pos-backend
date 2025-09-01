@@ -14,7 +14,7 @@ class SalesTransaction(TimeStampModelMixin, AuditModelMixin):
 
     class PaymentMethodChoices(models.TextChoices):
         CASH = 'Cash', 'Cash'
-        CARD = 'Card', 'Card'
+        ONLINE = 'Online', 'Online'
         CREDIT = 'Credit', 'Credit'
     
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, blank=True, null=True, related_name='sales_transactions')
