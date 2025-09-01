@@ -6,7 +6,7 @@ from core.apps.common.models import (
     SoftDeleteModelMixin,
     UserManager,
 )
-from core.apps.billing.models import SalesTransaction
+
 
 class User(SoftDeleteModelMixin, TimeStampModelMixin, AuditModelMixin, AbstractUser):
     class RoleChoices(models.TextChoices):
@@ -37,10 +37,15 @@ class Customer(TimeStampModelMixin, AuditModelMixin):
 
 
 class CustomerDeposit(models.Model):
+    class PaymentMethodChoices(models.TextChoices):
+        CASH = 'Cash', 'Cash'
+        CARD = 'Card', 'Card'
+        CREDIT = 'Credit', 'Credit'
+        
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='deposits')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     deposit_date = models.DateTimeField(auto_now_add=True)
-    payment_method = models.CharField(max_length=10, choices=SalesTransaction.PaymentMethodChoices)
+    payment_method = models.CharField(max_length=10, choices=PaymentMethodChoices.choices)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
