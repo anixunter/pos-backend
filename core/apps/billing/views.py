@@ -2,8 +2,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
-from core.apps.billing.models import SalesTransactionItem, SalesTransaction, ProductReturnItem, ProductReturn, CustomerDeposit
-from core.apps.billing.serializers import  SalesTransactionSerializer, ProductReturnSerializer, CustomerDepositSerializer
+from core.apps.billing.models import SalesTransactionItem, SalesTransaction, ProductReturnItem, ProductReturn
+from core.apps.billing.serializers import  SalesTransactionSerializer, ProductReturnSerializer
 
 
 class SalesTransactionViewSet(viewsets.ModelViewSet):
@@ -185,30 +185,6 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-
-class CustomerDepositViewSet(viewsets.ModelViewSet):
-    queryset = CustomerDeposit.objects.select_related('customer')
-    serializer_class = CustomerDepositSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        with transaction.atomic():
-            #create the deposit
-            deposit = CustomerDeposit.objects.create(**serializer.validated_data)
-            
-            #update customer balance
-            customer = deposit.customer
-            customer.outstanding_balance -= deposit.amount
-            customer.save(update_fields=['outstanding_balance'])
-        
-        return Respone(
-            self.get_serializer(deposit).data,
-            status=status.HTTP_201_CREATED
-        )
         
 
 class ProductReturnViewSet(viewsets.ModelViewSet):

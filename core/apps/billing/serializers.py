@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core.apps.billing.models import SalesTransactionItem, SalesTransaction, CustomerDeposit, ProductReturnItem, ProductReturn
+from core.apps.billing.models import SalesTransactionItem, SalesTransaction, ProductReturnItem, ProductReturn
 
 
 class SalesTransactionItemSerializer(serializers.ModelSerializer):
@@ -37,18 +37,6 @@ class SalesTransactionSerializer(serializers.ModelSerializer):
             'transaction_date', 'status', 
             'subtotal', 'tax_amount', 'total_amount', 'change_amount'
         ]
-
-
-class CustomerDepositSerializer(serializers.ModelSerializer):
-    customer_name = serializers.CharField(source='customer.name', read_only=True)
-    
-    class Meta:
-        model = CustomerDeposit
-        fields = [
-            'id', 'customer', 'customer_name', 'amount', 'deposit_date', 
-            'payment_method', 'notes'
-        ]
-        read_only_fields = ['deposit_date']
 
 
 class ProductReturnItemSerializer(serializers.ModelSerializer):

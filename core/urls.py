@@ -25,7 +25,7 @@ from drf_spectacular.views import (
 )
 from core.apps.products.views import CategoryViewSet, SupplierViewSet, ProductViewSet, PurchaseOrderViewSet, InventoryAdjustmentViewSet
 from core.apps.billing.views import SalesTransactionViewSet, ProductReturnViewSet
-from core.apps.users.views import CustomerViewSet
+from core.apps.users.views import CustomerViewSet, CustomerDepositViewSet
 
 router = DefaultRouter()
 router.register('categories', CategoryViewSet, basename='categories')
@@ -36,6 +36,8 @@ router.register('sales', SalesTransactionViewSet, basename='sales')
 router.register('returns', ProductReturnViewSet, basename='returns')
 router.register(r'inventory-adjustments', InventoryAdjustmentViewSet, basename='inventory-adjustments')
 router.register('customers', CustomerViewSet, basename='customers')
+router.register(r'customers-deposit', CustomerDepositViewSet, basename='customers-deposit')
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
