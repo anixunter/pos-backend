@@ -249,13 +249,13 @@ class ProductReturnViewSet(viewsets.ModelViewSet):
         instance.save(update_fields=[refund_amount])   
     
     @action(detail=True, methods=['post'])
-    def process(self, request, pk=None):
-        """Process a product return and update inventory"""
+    def complete(self, request, pk=None):
+        """Complete a product return and update inventory"""
         product_return = self.get_object()
         
         if product_return.status != ProductReturn.ReturnStatusChoices.PENDING:
             return Response(
-                {'error': 'Only pending returns can be processed'},
+                {'error': 'Only pending returns can be completed'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
