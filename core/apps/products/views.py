@@ -10,6 +10,7 @@ from core.apps.products.models import (
 from core.apps.products.serializers import (
     CategorySerializer, SupplierSerializer, ProductSerializer, PurchaseOrderSerializer, PurchaseOrderItemSerializer, InventoryAdjustmentSerializer
 )
+from core.apps.products.utils import apply_inventory_adjustment
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -30,13 +31,15 @@ class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def adjust_stock(self, request, pk=None):
         """Custom action to adjust product stock"""
         product = self.get_object()
         serializer = InventoryAdjustmentSerializer(data=request.data, context={'request': request})
         
         if serializer.is_valid():
-            adjustment = serializer.save(product=product)
+            adjustment = serializer.save(product=product, created_by=request.user)
+            apply_inventory_adjustment(adjustment)
             return Response({
                 'message': 'Stock adjusted successfully',
                 'adjusted_stock': product.current_stock,
@@ -185,11 +188,4 @@ class InventoryAdjustmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         adjustment = serializer.save(created_by=user)
 
-        product = adjustment.product
-        if adjustment.adjustment_type == InventoryAdjustment.AdjustmentTypeChoices.INCREASE:
-            product.current_stock += adjustment.quantity
-        elif adjustment.adjustment_type == InventoryAdjustment.AdjustmentTypeChoices.DECREASE:
-            if product.current_stock < adjustment.quantity:
-                raise serializers.ValidationError("Not enough stock for this adjustment")
-            product.current_stock -= adjustment.quantity
-        product.save()
+        apply_inventory_adjustment(adjustment)
