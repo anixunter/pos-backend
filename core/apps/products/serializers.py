@@ -3,11 +3,6 @@ from core.apps.products.models import (
     Category, Supplier, Product, PurchaseOrder, PurchaseOrderItem,
     InventoryAdjustment,
 )
-from core.apps.billing.models import (
-    SalesTransaction, SalesTransactionItem, ProductReturn,
-    ProductReturnItem,
-)
-from core.apps.users.models import Customer
 
 
 class CategorySerializer(serializers.ModelSerializer):

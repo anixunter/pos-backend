@@ -9,4 +9,4 @@ class CustomerSerializer(serializers.ModelSerializer):
             'id', 'name', 'phone', 'email', 'address', 'loyalty_points', 
             'outstanding_balance'
         ]
-        read_only_fields = ['outstanding_balance', 'loyalty_points']
+        read_only_fields = ['loyalty_points']

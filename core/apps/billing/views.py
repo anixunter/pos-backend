@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from core.apps.billing.models import SalesTransactionItem, SalesTransaction, ProductReturnItem, ProductReturn, CustomerDeposit
-from core.apps.billing.serializers import SalesTransactionItemSerializer, SalesTransactionSerializer, ProductReturnItemSerializer, ProductReturnSerializer, CustomerDepositSerializer
+from core.apps.billing.serializers import  SalesTransactionSerializer, ProductReturnSerializer, CustomerDepositSerializer
 
 
 class SalesTransactionViewSet(viewsets.ModelViewSet):
