@@ -17,12 +17,25 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from core.apps.products.views import CategoryViewSet, SupplierViewSet, ProductViewSet, PurchaseOrderViewSet, InventoryAdjustmentViewSet
+from core.apps.billing.views import SalesTransactionViewSet, ProductReturnViewSet
+from core.apps.users.views import CustomerViewSet
 
+router = DefaultRouter()
+router.register('categories', CategoryViewSet, basename='categories')
+router.register('suppliers', SupplierViewSet,  basename='suppliers')
+router.register('products', ProductViewSet, basename='products')
+router.register(r'purchase-orders', PurchaseOrderViewSet, basename='purchase-orders')
+router.register('sales', SalesTransactionViewSet, basename='sales')
+router.register('returns', ProductReturnViewSet, basename='returns')
+router.register(r'inventory-adjustments', InventoryAdjustmentViewSet, basename='inventory-adjustments')
+router.register('customers', CustomerViewSet, basename='customers')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
@@ -34,6 +47,7 @@ urlpatterns = [
     path(
         "api/docs/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"
     ),
+    path('', include(router.urls)),
 ]
 
 
