@@ -247,25 +247,32 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
             #update product stock
             product.current_stock += quantity_to_add
             
-            # update the current purchase price
-            product.purchase_price = item.unit_price
+            #check if purchase price has changed before updating and creating history
+            price_has_changed = product.purchase_price != item.unit_price
             
-            #create price history record
-            price_history_to_create.append(
-                ProductPurchasePriceHistory(
-                    product=product,
-                    purchase_price=item.unit_price,
-                    purchase_order=instance,
-                    quantity_received=quantity_to_add
+            if price_has_changed:
+            # update the current purchase price only if it changed
+                product.purchase_price = item.unit_price
+            
+                #create price history record only if price changed
+                price_history_to_create.append(
+                    ProductPurchasePriceHistory(
+                        product=product,
+                        purchase_price=item.unit_price,
+                        purchase_order=instance,
+                        quantity_received=quantity_to_add
+                    )
                 )
-            )
             
             #create update product record
             products_to_update.append(product)
         
         #bulk update products
         if products_to_update:
-            Product.objects.bulk_update(products_to_update, ['current_stock', 'purchase_price'])
+            update_fields = ['current_stock']
+            if price_history_to_create:
+                update_fields.append('purchase_price')
+            Product.objects.bulk_update(products_to_update, update_fields)
         
         #bulk create price history records
         if price_history_to_create:
