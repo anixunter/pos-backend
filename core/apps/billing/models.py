@@ -6,6 +6,7 @@ from core.apps.common.models import (
 from core.apps.users.models import Customer
 from core.apps.products.models import Product
 
+
 class SalesTransaction(TimeStampModelMixin, AuditModelMixin):
     class PaymentMethodChoices(models.TextChoices):
         CASH = 'Cash', 'Cash'
@@ -43,11 +44,16 @@ class SalesTransactionItem(models.Model):
     
 
 # product return models below
-class ProductReturn(TimeStampModelMixin, AuditModelMixin): 
+class ProductReturn(TimeStampModelMixin, AuditModelMixin):
+    class RefundMethodChoices(models.TextChoices):
+        CREDIT = 'Credit', 'Credit to Account'
+        CASH = 'Cash', 'Cash Refund'
+         
     transaction = models.ForeignKey(SalesTransaction, on_delete=models.CASCADE, related_name='returns')
     return_date = models.DateTimeField(auto_now_add=True)
     reason = models.TextField()
     refund_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    refund_method = models.CharField(max_length=10, choices=RefundMethodChoices.choices, default=RefundMethodChoices.CASH)
     notes = models.TextField(blank=True)
     
     def __str__(self):

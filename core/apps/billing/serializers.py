@@ -28,13 +28,13 @@ class SalesTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesTransaction
         fields = [
-            'id', 'customer', 'customer_name', 'transaction_date', 'status', 
+            'id', 'customer', 'customer_name', 'transaction_date', 
             'payment_method', 'subtotal', 'discount_amount', 'tax_amount', 
             'total_amount', 'amount_paid', 'change_amount', 'notes', 'items'
         ]
         read_only_fields = [
-            'transaction_date', 'status', 
-            'subtotal', 'tax_amount', 'total_amount', 'change_amount'
+            'transaction_date', 'subtotal', 'tax_amount',
+            'total_amount', 'change_amount'
         ]
     
     def validate(self, data):
@@ -68,9 +68,26 @@ class ProductReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductReturn
         fields = [
-            'id', 'transaction', 'transaction_id', 'return_date', 'status', 
-            'reason', 'refund_amount', 'notes', 'items'
+            'id', 'transaction', 'transaction_id', 'return_date', 
+            'reason', 'refund_amount', 'refund_method', 'notes', 'items'
         ]
-        read_only_fields = ['return_date', 'status', 'refund_amount']
+        read_only_fields = ['return_date', 'refund_amount']
+    
+    def validate(self, data):
+        transaction = data.get('transaction')
+        items_data = data.get('items', [])
+        
+        # Validate that return has at least one item
+        if not items_data:
+            raise serializers.ValidationError("Return must have at least one item")
+        
+        # Validate that credit refunds require a customer
+        refund_method = data.get('refund_method', ProductReturn.RefundMethodChoices.CREDIT)
+        if refund_method == ProductReturn.RefundMethodChoices.CREDIT:
+            transaction = data.get('transaction')
+            if transaction and not transaction.customer:
+                raise serializers.ValidationError("Credit refunds require a customer to be associated with the original transaction")
+        
+        return data
 
 

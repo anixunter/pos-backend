@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
-from core.apps.products.models import Products
+from core.apps.products.models import Product
 from core.apps.billing.models import SalesTransactionItem, SalesTransaction, ProductReturnItem, ProductReturn
 from core.apps.billing.serializers import  SalesTransactionSerializer, ProductReturnSerializer
 from core.apps.users.permissions import IsAdmin
@@ -162,7 +162,7 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
             product.current_stock -= item.quantity
             products_to_update.append(product)
         
-        Products.objects.bulk_update(products_to_update, ['current_stock'])
+        Product.objects.bulk_update(products_to_update, ['current_stock'])
     
     def _handle_customer_accounting(self, instance):
         """Handle customer credit/deposit application"""
@@ -219,57 +219,49 @@ class ProductReturnViewSet(viewsets.ModelViewSet):
             #calculate refund amount
             self._calculate_refund(product_return)
             
+            #update inventory
+            self._update_inventory(product_return)
+            
+            #handle refund based on method
+            self._update_customer_balance(product_return)
+            
         return Response(
             self.get_serializer(product_return).data,
             status=status.HTTP_201_CREATED
+        )
+    
+    def update(self, request, *args, **kwargs):
+        # For returns, typically you don't allow updates after creation
+        # since inventory and customer balance have already been updated
+        return Response(
+            {'error': 'Product returns cannot be modified after creation'},
+            status=status.HTTP_400_BAD_REQUEST
         )
         
     def _calculate_refund(self, instance):
         """Calculate refund amount based on returned items"""
         refund_amount = sum(item.total_price for item in instance.items.all())
         instance.refund_amount = refund_amount
-        instance.save(update_fields=[refund_amount])   
+        instance.save(update_fields=[refund_amount])
     
-    @action(detail=True, methods=['post'])
-    def complete(self, request, pk=None):
-        """Complete a product return and update inventory"""
-        product_return = self.get_object()
+    def _update_inventory(self, instance):
+        """Update product stock levels immediately"""
+        items = instance.items.select_related('product').all()
+        products_to_update = []
         
-        if product_return.status != ProductReturn.ReturnStatusChoices.PENDING:
-            return Response(
-                {'error': 'Only pending returns can be completed'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        for item in items:
+            product = item.product
+            product.current_stock += item.quantity
+            products_to_update.append(product)
         
-        try:
-            with transaction.atomic():
-                #bulk update product stock
-                items = product_return.items.select_related('prodcut').all()
-                products_to_update = []
-                
-                for item in items:
-                    product = item.product
-                    product.current_stock += item.quantity
-                    products_to_update.append(product)
-                
-                if products_to_update:
-                    Product.objects.bulk_update(products_to_update, ['current_stock'])
-                
-                #update customer balance if applicable
-                if product_return.transaction.customer:
-                    customer = product_return.transaction.customer
-                    customer.outstanding_balance -= product_return.refund_amount
-                    customer.save(update_fields=['outstanding_balance'])
-                
-                #update return status
-                product_return.status = ProductReturn.ReturnStatusChoices.COMPLETED
-                product_return.save(update_fields=['status'])
-                
-                serializer = self.get_serializer(product_return)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        if products_to_update:
+            Product.objects.bulk_update(products_to_update, ['current_stock'])
+    
+    def _update_customer_balance(self, instance):
+        """Handle refund based on the selected method"""
+        if instance.refund_method == ProductReturn.RefundMethodChoices.CREDIT:
+            #credit customer account for future purchases
+            if instance.transaction.customer:
+                customer = instance.transaction.customer
+                customer.outstanding_balance -= instance.refund_amount
+                customer.save(update_fields=['outstanding_balance'])
