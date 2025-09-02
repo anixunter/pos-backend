@@ -5,12 +5,19 @@ from rest_framework.decorators import action
 from core.apps.products.models import Products
 from core.apps.billing.models import SalesTransactionItem, SalesTransaction, ProductReturnItem, ProductReturn
 from core.apps.billing.serializers import  SalesTransactionSerializer, ProductReturnSerializer
+from core.apps.users.permissions import IsAdmin
 
 
 class SalesTransactionViewSet(viewsets.ModelViewSet):
     queryset = SalesTransaction.objects.select_related('customer').prefetch_related('items__product')
     serializer_class = SalesTransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        """Override to set different permissions for different actions"""
+        if self.action == 'update':
+            permission_classes = [IsAdmin]
+        return [permission() for permission in permission_classes]
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
