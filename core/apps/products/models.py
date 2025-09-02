@@ -45,7 +45,6 @@ class PurchaseOrder(TimeStampModelMixin, AuditModelMixin):
     class StatusChoices(models.TextChoices):
         PENDING = 'Pending', 'Pending'
         COMPLETED = 'Completed', 'Completed'
-
     
     supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name='purchase_orders')
     order_date = models.DateField(auto_now_add=True)
@@ -71,6 +70,21 @@ class PurchaseOrderItem(models.Model):
     def total_price(self):
         return self.quantity * self.unit_price
 
+
+class ProductPurchasePriceHistory(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='purchase_price_history')
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
+    effective_date = models.DateTimeField(auto_now_add=True)
+    purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='price_updates')
+    quantity_received = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-effective_date']
+        verbose_name_plural = 'Product purchase price history'
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.purchase_price} on {self.effective_date.date()}"
+    
 
 class InventoryAdjustment(TimeStampModelMixin, AuditModelMixin):
     class AdjustmentTypeChoices(models.TextChoices):

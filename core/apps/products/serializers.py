@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from core.apps.products.models import (
     Category, Supplier, Product, PurchaseOrder, PurchaseOrderItem,
-    InventoryAdjustment,
+    InventoryAdjustment, ProductPurchasePriceHistory
 )
 
 
@@ -37,38 +37,40 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class PurchaseOrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
-    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    
+    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True) 
     class Meta:
         model = PurchaseOrderItem
         fields = [
             'id', 'product', 'product_name', 'quantity', 'unit_price', 
             'received_quantity', 'total_price'
         ]
-    
-    def validate(self, data):
-        if data.get('received_quantity') and data.get('quantity'):
-            if data['received_quantity'] > data['quantity']:
-                raise serializers.ValidationError("Received quantity cannot exceed ordered quantity")
-        return data
+        read_only_fields = ['received_quantity']  # Initially read-only, updated during completion
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
     items = PurchaseOrderItemSerializer(many=True)
-    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
-    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True) 
     class Meta:
         model = PurchaseOrder
         fields = [
             'id', 'supplier', 'supplier_name', 'order_date', 'status', 
             'total_amount', 'notes', 'items'
         ]
+        read_only_fields = ['order_date', 'status', 'total_amount']
+
+
+class ProductPurchasePriceHistorySerializer(serializers.ModelSerializer):
+    purchase_order_reference = serializers.CharField(source='purchase_order.__srt__', read_only=True)
+    class Meta:
+        model = ProductPurchasePriceHistory
+        fields = [
+            'purchase_price', 'effective_date', 'purchase_order',
+            'purchase_order_reference', 'quantity_received'
+        ]
 
 
 class InventoryAdjustmentSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
-
     class Meta:
         model = InventoryAdjustment
         fields = ['id', 'product', 'product_name', 'adjustment_type', 'quantity', 

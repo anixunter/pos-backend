@@ -7,11 +7,6 @@ from core.apps.users.models import Customer
 from core.apps.products.models import Product
 
 class SalesTransaction(TimeStampModelMixin, AuditModelMixin):
-    class TransactionStatusChoices(models.TextChoices):
-        PENDING = 'Pending', 'Pending'
-        COMPLETED = 'Completed', 'Completed'
-        RETURNED = 'Returned', 'Returned'
-
     class PaymentMethodChoices(models.TextChoices):
         CASH = 'Cash', 'Cash'
         ONLINE = 'Online', 'Online'
@@ -19,7 +14,6 @@ class SalesTransaction(TimeStampModelMixin, AuditModelMixin):
     
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, blank=True, null=True, related_name='sales_transactions')
     transaction_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=10, choices=TransactionStatusChoices.choices, default=TransactionStatusChoices.PENDING)
     payment_method = models.CharField(max_length=10, choices=PaymentMethodChoices.choices)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -49,14 +43,9 @@ class SalesTransactionItem(models.Model):
     
 
 # product return models below
-class ProductReturn(TimeStampModelMixin, AuditModelMixin):
-    class ReturnStatusChoices(models.TextChoices):
-        PENDING = 'Pending', 'Pending'
-        COMPLETED = 'Completed', 'Completed'
-    
+class ProductReturn(TimeStampModelMixin, AuditModelMixin): 
     transaction = models.ForeignKey(SalesTransaction, on_delete=models.CASCADE, related_name='returns')
     return_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=10, choices=ReturnStatusChoices.choices, default=ReturnStatusChoices.PENDING)
     reason = models.TextField()
     refund_amount = models.DecimalField(max_digits=10, decimal_places=2)
     notes = models.TextField(blank=True)

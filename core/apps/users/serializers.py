@@ -17,7 +17,6 @@ class CustomerDepositSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerDeposit
         fields = [
-            'id', 'customer', 'customer_name', 'amount', 'deposit_date', 
-            'payment_method', 'notes'
+            'id', 'customer', 'customer_name', 'amount', 'deposit_date', 'notes'
         ]
         read_only_fields = ['deposit_date']

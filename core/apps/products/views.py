@@ -5,10 +5,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from core.apps.products.models import (
-    Category, Supplier, Product, PurchaseOrder, PurchaseOrderItem, InventoryAdjustment
+    Category, Supplier, Product, PurchaseOrder, PurchaseOrderItem, InventoryAdjustment, ProductPurchasePriceHistory
 )
 from core.apps.products.serializers import (
-    CategorySerializer, SupplierSerializer, ProductSerializer, PurchaseOrderSerializer, PurchaseOrderItemSerializer, InventoryAdjustmentSerializer
+    CategorySerializer, SupplierSerializer, ProductSerializer, PurchaseOrderSerializer, InventoryAdjustmentSerializer, ProductPurchasePriceHistorySerializer
 )
 from core.apps.products.utils import apply_inventory_adjustment
 
@@ -56,6 +56,23 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(low_stock_products, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def price_history(self, request, pk=None):
+        product = self.get_object()
+        limit = int(request.query_params.get('limit', 5))
+        
+        price_history = product.purchase_price_history.all()[:limit]
+        serializer = ProductPurchasePriceHistorySerializer(price_history, many=True)
+        
+        return Response(
+            {
+                'product_id': product.id,
+                'product_name': product.name,
+                'current_purchase_price': product.purchase_price,
+                'price_history': serializer.data
+            }
+        )
 
 
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
@@ -64,13 +81,14 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     def create(self, request, *args, **kwargs):
+        """Create a draft (PENDING) purchase order"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
         items_data = serializer.validated_data.pop('items', [])
         
         with transaction.atomic():
-            #create purchase order
+            #create purchase order as draft/pending by default
             purchase_order = PurchaseOrder.objects.create(**serializer.validated_data)
             
             #bulk create purchase order items
@@ -80,6 +98,9 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                     for item_data in items_data
                 ]
                 PurchaseOrderItem.objects.bulk_create(items_to_create)
+            
+            #calculate total amount
+            self._calculate_total(purchase_order)
         
         return Response(
             self.get_serializer(purchase_order).data,
@@ -87,19 +108,27 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         )
     
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        """Update purchase order - only allowed for PENDING status"""
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        
+        #prevent updates to completed orders
+        if instance.status != PurchaseOrder.StatusChoices.PENDING:
+            return Response(
+                {'error':'Cannot modify completed purchase orders'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         
-        items_data = serializer.validated_data.pop('items', [])
+        items_data = serializer.validated_data.pop('items', None) # use none to distinguish from empty list
         
         with transaction.atomic():
             #update main fields
             super().perform_update(serializer)
             
             #handle items with bulk operation
-            if items_data:
+            if items_data is not None:
                 existing_items = {item.id: item for item in instance.items.all()}
                 items_to_keep = set()
                 items_to_create = []
@@ -111,8 +140,8 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                         #prepare for bulk update
                         item = existing_items[item_id]
                         for attr, val in item_data.items():
-                            #skip the id field and update other item's fields
-                            if attr != 'id':
+                            #skip the id and received_quantity field and update other item's fields
+                            if attr != 'id' and attr != 'received_quantity':
                                 setattr(item, attr, val)
                         items_to_update.append(item)
                         items_to_keep.add(item_id)
@@ -134,15 +163,15 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 items_to_delete = set(existing_items.keys()) - items_to_keep
                 if items_to_delete:
                     PurchaseOrderItem.objects.filter(id__in=items_to_delete).delete()
-            else:
-                #if no items data provided, delete all existing items
-                instance.items.all().delete()
+            
+            #recalculate total
+            self._calculate_total(instance)
 
         return Response(self.get_serializer(instance).data)
     
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
-        """Complete a purchase order and update inventory"""
+        """Complete a purchase order and update inventory based on received quantities"""
         purchase_order = self.get_object()
         
         if purchase_order.status != PurchaseOrder.StatusChoices.PENDING:
@@ -151,19 +180,35 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        received_quantities = request.data.get('received_quantities', {})
+        #------------------------------#
+        # sample payload from frontend #
+        #------------------------------#
+        # {
+        #     "received_quantities": {
+        #         "1": 5,    # Item ID 1, received 5 units
+        #         "2": 3     # Item ID 2, received 3 units
+        #     }
+        # }
+        
         try:
             with transaction.atomic():
-                #bulk update product stock
-                items = purchase_order.items.select_related('product').all()
-                products_to_update = []
+                #update received quantities if provided
+                if received_quantities:
+                    for item_id, received_qty in received_quantities.items():
+                        try:
+                            item = purchase_order.items.get(id=item.id)
+                            if received_qty > item.quantity:
+                                raise ValidationError(
+                                    "Received quantity exceeded ordered quantity"
+                                )
+                            item.received_quantity = received_qty
+                            item.save(update_fields=['received_quantity'])
+                        except PurchaseOrderItem.DoesNotExist:
+                            raise ValidationError(f"Item with id {item_id} not found in this purchase order")
                 
-                for item in items:
-                    item.product.current_stock += item.quantity
-                    products_to_update.append(item.product)
-                
-                #bulk update products
-                if products_to_update:
-                    Product.objects.bulk_update(prodcuts_to_update, ['current_stock'])
+                #update inventory and track purchase prices
+                self._update_inventory_and_prices(purchase_order)
                 
                 #update purchase order status
                 purchase_order.status = PurchaseOrder.StatusChoices.COMPLETED
@@ -177,6 +222,47 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+    
+    def _update_inventory_and_prices(self, instance):
+        """Update inventory and track purchase prices in history"""
+        items = instance.items.select_related('product').all()
+        products_to_update = []
+        price_history_to_create = []
+        
+        for item in items:
+            quantity_to_add = item.received_quantity
+            #skip items with zero received quantity
+            if quantity_to_add == 0:
+                continue
+            
+            product = item.product
+            
+            #update product stock
+            product.current_stock += quantity_to_add
+            
+            # update the current purchase price
+            product.purchase_price = item.unit_price
+            
+            #create price history record
+            price_history_to_create.append(
+                ProductPurchasePriceHistory(
+                    product=product,
+                    purchase_price=item.unit_price,
+                    purchase_order=instance,
+                    quantity_received=quantity_to_add
+                )
+            )
+            
+            #create update product record
+            products_to_update.append(product)
+        
+        #bulk update products
+        if products_to_update:
+            Product.objects.bulk_update(products_to_update, ['current_stock', 'purchase_price'])
+        
+        #bulk create price history records
+        if price_history_to_create:
+            ProductPurchasePriceHistory.objects.bulk_create(price_history_to_create)
 
 
 class InventoryAdjustmentViewSet(viewsets.ModelViewSet):
