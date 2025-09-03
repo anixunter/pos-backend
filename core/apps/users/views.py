@@ -1,9 +1,23 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from core.apps.users.models import Customer, CustomerDeposit
-from core.apps.users.serializers import CustomerSerializer, CustomerDepositSerializer
+from core.apps.users.models import User, Customer, CustomerDeposit
+from core.apps.users.serializers import UserSerializer, CustomerSerializer, CustomerDepositSerializer
+from core.apps.users.permissions import IsAdmin, CustomUserPermission
 
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [CustomUserPermission]
+        
+    @action(detail=False, methods=['get'], url_path='self')
+    def self_detail(self, request):
+        """
+        Get the current user's details.
+        """
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+    
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
