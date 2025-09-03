@@ -64,7 +64,7 @@ class CustomUserPermission(permissions.BasePermission):
             return True
             
         # For the 'self' action, any authenticated user is allowed
-        if view.action == 'self':
+        if view.action == 'self_detail':
             return True
         
         # For retrieve/update actions, check if it's their own data
