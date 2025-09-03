@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from core.apps.products.models import Product
 from core.apps.billing.models import SalesTransactionItem, SalesTransaction, ProductReturnItem, ProductReturn
 from core.apps.billing.serializers import  SalesTransactionSerializer, ProductReturnSerializer
-from core.apps.users.permissions import IsAdmin
+from core.apps.users.permissions import IsSuperUser, IsAdmin
 
 
 class SalesTransactionViewSet(viewsets.ModelViewSet):
@@ -16,7 +16,7 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Override to set different permissions for different actions"""
         if self.action == 'update':
-            self.permission_classes = [IsAdmin]
+            self.permission_classes = [IsSuperUser | IsAdmin]
         return [permission() for permission in self.permission_classes]
     
     def create(self, request, *args, **kwargs):

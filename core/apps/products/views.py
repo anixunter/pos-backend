@@ -11,7 +11,7 @@ from core.apps.products.serializers import (
     CategorySerializer, SupplierSerializer, ProductSerializer, PurchaseOrderSerializer, InventoryAdjustmentSerializer, ProductPurchasePriceHistorySerializer
 )
 from core.apps.products.utils import apply_inventory_adjustment
-from core.apps.users.permissions import IsAdmin, IsStaff
+from core.apps.users.permissions import IsSuperUser, IsAdmin, IsStaff
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -34,7 +34,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Override to set different permissions for different actions"""
         if self.action == 'adjust_stock':
-            self.permission_classes = [IsAdmin]
+            self.permission_classes = [IsSuperUser | IsAdmin]
         return [permission() for permission in self.permission_classes]
         
     @action(detail=True, methods=['post'])
@@ -85,7 +85,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
     queryset = PurchaseOrder.objects.select_related('supplier').prefetch_related('items__product')
     serializer_class = PurchaseOrderSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsSuperUser | IsAdmin]
     
     def create(self, request, *args, **kwargs):
         """Create a draft (PENDING) purchase order"""
@@ -282,7 +282,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
 class InventoryAdjustmentViewSet(viewsets.ModelViewSet):
     queryset = InventoryAdjustment.objects.select_related('product')
     serializer_class = InventoryAdjustmentSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsSuperUser | IsAdmin]
     
     def perform_create(self, serializer):
         user = self.request.user
