@@ -1,8 +1,11 @@
+from django.db import transaction
+from django.http import Http404
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from core.apps.users.models import User, Customer, CustomerDeposit
 from core.apps.users.serializers import UserSerializer, CustomerSerializer, CustomerDepositSerializer
+from core.apps.billing.models import SalesTransaction
 from core.apps.users.permissions import IsAdmin, CustomUserPermission
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -27,8 +30,20 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def purchase_history(self, request, pk=None):
         """Get customer purchase history"""
-        customer = self.get_object()
+        try:
+            customer = self.get_object()
+        except Http404:
+            return Response(
+                {"error": "Customer not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
         transactions = SalesTransaction.objects.filter(customer=customer)
+        if not transactions.exists():
+            return Response(
+                {"message": "No purchase history found for this customer."},
+                status=status.HTTP_200_OK
+            )
         
         serializer = SalesTransactionSerializer(transactions, many=True)
         return Response(serializer.data)
@@ -47,7 +62,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
         #customer owes money (positive oustanding balance ) or has credit (negative outstanding balance)
         #we only allow paying off debt, not adding to credit
-        if customer.outstandin_balance <= 0:
+        if customer.outstanding_balance <= 0:
             return Response(
                 {'error':'Customer has no outstanding balance to pay'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -56,7 +71,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         try:
             amount_to_pay = min(payment_amount, customer.outstanding_balance)
             
-            customer.outsanding_balance -= amount_to_pay
+            customer.outstanding_balance -= amount_to_pay
             customer.save(update_fields=['outstanding_balance'])
             
             return Response({
@@ -74,7 +89,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def balance_summary(self, request, pk=None):
         """Get customer balance summary"""
-        customer = self.get_object()
+        try:
+            customer = self.get_object()
+        except Http404:
+            return Response(
+                {'error':'Customer not found.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         balance_info = {
             'outstanding_balance': customer.outstanding_balance,
@@ -104,7 +125,7 @@ class CustomerDepositViewSet(viewsets.ModelViewSet):
             customer.outstanding_balance -= deposit.amount
             customer.save(update_fields=['outstanding_balance'])
         
-        return Respone(
+        return Response(
             self.get_serializer(deposit).data,
             status=status.HTTP_201_CREATED
         )
