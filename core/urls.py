@@ -23,6 +23,11 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
 from core.apps.products.views import CategoryViewSet, SupplierViewSet, ProductViewSet, PurchaseOrderViewSet, InventoryAdjustmentViewSet
 from core.apps.billing.views import SalesTransactionViewSet, ProductReturnViewSet
 from core.apps.users.views import UserViewSet, CustomerViewSet, CustomerDepositViewSet
@@ -50,6 +55,9 @@ urlpatterns = [
     path(
         "api/docs/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"
     ),
+    path("auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),
+    path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("auth/token/verify/", TokenVerifyView.as_view(), name="token-verify"),
     path('', include(router.urls)),
 ]
 
