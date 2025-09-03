@@ -25,7 +25,7 @@ from drf_spectacular.views import (
 )
 from core.apps.products.views import CategoryViewSet, SupplierViewSet, ProductViewSet, PurchaseOrderViewSet, InventoryAdjustmentViewSet
 from core.apps.billing.views import SalesTransactionViewSet, ProductReturnViewSet
-from core.apps.users.views import CustomerViewSet, CustomerDepositViewSet
+from core.apps.users.views import UserViewSet, CustomerViewSet, CustomerDepositViewSet
 
 router = DefaultRouter()
 router.register('categories', CategoryViewSet, basename='categories')
@@ -35,6 +35,7 @@ router.register(r'purchase-orders', PurchaseOrderViewSet, basename='purchase-ord
 router.register('sales', SalesTransactionViewSet, basename='sales')
 router.register('returns', ProductReturnViewSet, basename='returns')
 router.register(r'inventory-adjustments', InventoryAdjustmentViewSet, basename='inventory-adjustments')
+router.register('users', UserViewSet, basename='users')
 router.register('customers', CustomerViewSet, basename='customers')
 router.register(r'customers-deposit', CustomerDepositViewSet, basename='customers-deposit')
 
