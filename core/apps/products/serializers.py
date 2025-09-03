@@ -78,3 +78,8 @@ class InventoryAdjustmentSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_by']
 
 
+class AdjustStockSerializer(InventoryAdjustmentSerializer):
+    class Meta(InventoryAdjustmentSerializer.Meta):
+        fields = InventoryAdjustmentSerializer.Meta.fields
+        read_only_fields = InventoryAdjustmentSerializer.Meta.read_only_fields + ['product']
+    

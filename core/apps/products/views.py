@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, viewsets, status, permissions
 from rest_framework.decorators import action
@@ -8,7 +9,8 @@ from core.apps.products.models import (
     Category, Supplier, Product, PurchaseOrder, PurchaseOrderItem, InventoryAdjustment, ProductPurchasePriceHistory
 )
 from core.apps.products.serializers import (
-    CategorySerializer, SupplierSerializer, ProductSerializer, PurchaseOrderSerializer, InventoryAdjustmentSerializer, ProductPurchasePriceHistorySerializer
+    CategorySerializer, SupplierSerializer, ProductSerializer, PurchaseOrderSerializer,
+    InventoryAdjustmentSerializer, ProductPurchasePriceHistorySerializer, AdjustStockSerializer
 )
 from core.apps.products.utils import apply_inventory_adjustment
 from core.apps.users.permissions import IsSuperUser, IsAdmin, IsStaff
@@ -42,21 +44,21 @@ class ProductViewSet(viewsets.ModelViewSet):
     def adjust_stock(self, request, pk=None):
         """Custom action to adjust product stock"""
         product = self.get_object()
-        serializer = InventoryAdjustmentSerializer(data=request.data, context={'request': request})
+        serializer = AdjustStockSerializer(data=request.data)
         
         if serializer.is_valid():
             adjustment = serializer.save(product=product, created_by=request.user)
             apply_inventory_adjustment(adjustment)
             return Response({
                 'message': 'Stock adjusted successfully',
-                'adjusted_stock': product.current_stock,
+                'stock_after_adjustment': product.current_stock,
                 'adjustment_id': adjustment.id
             }, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['get'])
-    def low_stock(self, request):
+    def low_stocks(self, request):
         """Get products with low stock"""
         low_stock_products = self.get_queryset().filter(
             current_stock__lte=F('minimum_stock')
