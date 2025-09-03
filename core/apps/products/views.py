@@ -34,8 +34,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Override to set different permissions for different actions"""
         if self.action == 'adjust_stock':
-            permission_classes = [IsAdmin]
-        return [permission() for permission in permission_classes]
+            self.permission_classes = [IsAdmin]
+        return [permission() for permission in self.permission_classes]
         
     @action(detail=True, methods=['post'])
     @transaction.atomic

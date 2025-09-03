@@ -16,8 +16,8 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Override to set different permissions for different actions"""
         if self.action == 'update':
-            permission_classes = [IsAdmin]
-        return [permission() for permission in permission_classes]
+            self.permission_classes = [IsAdmin]
+        return [permission() for permission in self.permission_classes]
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
