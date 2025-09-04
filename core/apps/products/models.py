@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 from core.apps.common.models import(
     TimeStampModelMixin,
     AuditModelMixin,
@@ -25,6 +26,11 @@ class Supplier(TimeStampModelMixin, AuditModelMixin):
 
 
 class Product(TimeStampModelMixin, AuditModelMixin):
+    class UnitChoices(models.TextChoices):
+        PIECE = 'Piece', 'Piece'
+        KG = 'Kg', 'Kg'
+        SQUARE_METER = 'Sq.m', 'Sq.m'
+        
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     sku = models.CharField(max_length=50, unique=True)  # Stock Keeping Unit
@@ -33,9 +39,9 @@ class Product(TimeStampModelMixin, AuditModelMixin):
     supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name='products')
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
-    current_stock = models.PositiveIntegerField(default=0)
-    minimum_stock = models.PositiveIntegerField(default=0)
-    unit_of_measurement = models.CharField(max_length=20, default='piece')
+    current_stock = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    minimum_stock = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    unit_of_measurement = models.CharField(max_length=20, choices=UnitChoices.choices, default=UnitChoices.PIECE)
     
     def __str__(self):
         return self.name
@@ -59,9 +65,9 @@ class PurchaseOrder(TimeStampModelMixin, AuditModelMixin):
 class PurchaseOrderItem(models.Model):
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    received_quantity = models.PositiveIntegerField(default=0)
+    received_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     
     def __str__(self):
         return f"{self.quantity} of {self.product.name}"
@@ -76,7 +82,7 @@ class ProductPurchasePriceHistory(models.Model):
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
     effective_date = models.DateTimeField(auto_now_add=True)
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='price_updates')
-    quantity_received = models.PositiveIntegerField(default=0)
+    quantity_received = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     
     class Meta:
         ordering = ['-effective_date']
@@ -93,7 +99,7 @@ class InventoryAdjustment(TimeStampModelMixin, AuditModelMixin):
     
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     adjustment_type = models.CharField(max_length=10, choices=AdjustmentTypeChoices.choices)
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     reason = models.TextField()
     adjustment_date = models.DateTimeField(auto_now_add=True)
     

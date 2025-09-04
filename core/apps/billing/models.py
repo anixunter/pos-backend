@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 from core.apps.common.models import (
     TimeStampModelMixin,
     AuditModelMixin,
@@ -31,7 +32,7 @@ class SalesTransaction(TimeStampModelMixin, AuditModelMixin):
 class SalesTransactionItem(models.Model):
     transaction = models.ForeignKey(SalesTransaction, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     
@@ -63,7 +64,7 @@ class ProductReturn(TimeStampModelMixin, AuditModelMixin):
 class ProductReturnItem(models.Model):
     product_return = models.ForeignKey(ProductReturn, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     
     def __str__(self):

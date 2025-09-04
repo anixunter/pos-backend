@@ -1,10 +1,11 @@
 from django.db import transaction
 from django.db.models import F
 from django.shortcuts import get_object_or_404
-from rest_framework import serializers, viewsets, status, permissions
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiExample
 from core.apps.products.models import (
     Category, Supplier, Product, PurchaseOrder, PurchaseOrderItem, InventoryAdjustment, ProductPurchasePriceHistory
 )
@@ -13,7 +14,7 @@ from core.apps.products.serializers import (
     InventoryAdjustmentSerializer, ProductPurchasePriceHistorySerializer, AdjustStockSerializer
 )
 from core.apps.products.utils import apply_inventory_adjustment
-from core.apps.users.permissions import IsSuperUser, IsAdmin, IsStaff
+from core.apps.users.permissions import IsSuperUser, IsAdmin
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -176,8 +177,19 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
             #recalculate total
             self._calculate_total(instance)
 
-        return Response(self.get_serializer(instance).data)
+        return Response({"message":"Purchase Order updated successfully."}, status=status.HTTP_201_CREATED)
     
+    @extend_schema(
+        description="Update received quantities for PurchaseOrderItem. Provide a dictionary mapping purchse order item IDs to quantities.",
+        examples=[
+            OpenApiExample(
+                "Example payload",
+                value={"received_quantities": {"1": 5, "2": 3}},
+                request_only=True,
+                description="key is the purchase order item id, value is the received quantity"
+            )
+        ]
+    )
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
         """Complete a purchase order and update inventory based on received quantities"""
@@ -190,31 +202,27 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
             )
         
         received_quantities = request.data.get('received_quantities', {})
-        #------------------------------#
-        # sample payload from frontend #
-        #------------------------------#
-        # {
-        #     "received_quantities": {
-        #         "1": 5,    # Item ID 1, received 5 units
-        #         "2": 3     # Item ID 2, received 3 units
-        #     }
-        # }
         
         try:
             with transaction.atomic():
                 #update received quantities if provided
                 if received_quantities:
+                    items_to_update = []
+                    
                     for item_id, received_qty in received_quantities.items():
                         try:
-                            item = purchase_order.items.get(id=item.id)
+                            item = purchase_order.items.get(id=item_id)
                             if received_qty > item.quantity:
                                 raise ValidationError(
                                     "Received quantity exceeded ordered quantity"
                                 )
                             item.received_quantity = received_qty
-                            item.save(update_fields=['received_quantity'])
+                            items_to_update.append(item)
                         except PurchaseOrderItem.DoesNotExist:
-                            raise ValidationError(f"Item with id {item_id} not found in this purchase order")
+                            raise ValidationError(f"Product with id {item_id} not found in this purchase order")
+
+                    #bulk update all items
+                    PurchaseOrderItem.objects.bulk_update(items_to_update, ['received_quantity'])
                 
                 #update inventory and track purchase prices
                 self._update_inventory_and_prices(purchase_order)
@@ -223,14 +231,23 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 purchase_order.status = PurchaseOrder.StatusChoices.COMPLETED
                 purchase_order.save(update_fields=['status'])
                 
-                serializer = self.get_serializer(purchase_order)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                # serializer = self.get_serializer(purchase_order)
+                return Response({"message":"Purchase Order completed successfully."}, status=status.HTTP_200_OK)
         
         except Exception as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+    
+    def _calculate_total(self, instance):
+        """Calculate total amount for the purchase order"""
+        total = sum(
+            item.total_price
+            for item in instance.items.all()
+        )
+        instance.total_amount = total
+        instance.save(update_fields=['total_amount'])
     
     def _update_inventory_and_prices(self, instance):
         """Update inventory and track purchase prices in history"""
