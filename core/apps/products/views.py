@@ -177,7 +177,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
             #recalculate total
             self._calculate_total(instance)
 
-        return Response({"message":"Purchase Order updated successfully."}, status=status.HTTP_201_CREATED)
+        return Response({"message":"Purchase Order updated successfully."}, status=status.HTTP_200_OK)
     
     @extend_schema(
         description="Update received quantities for PurchaseOrderItem. Provide a dictionary mapping purchse order item IDs to quantities.",
