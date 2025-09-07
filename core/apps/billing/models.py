@@ -53,8 +53,8 @@ class ProductReturn(TimeStampModelMixin, AuditModelMixin):
     transaction = models.ForeignKey(SalesTransaction, on_delete=models.CASCADE, related_name='returns')
     return_date = models.DateTimeField(auto_now_add=True)
     reason = models.TextField()
-    refund_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    refund_method = models.CharField(max_length=10, choices=RefundMethodChoices.choices, default=RefundMethodChoices.CASH)
+    refund_method = models.CharField(max_length=10, choices=RefundMethodChoices.choices)
+    refund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(blank=True)
     
     def __str__(self):

@@ -189,7 +189,7 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
                 customer.outstanding_balance += amount_owed
         
         customer.save(update_fields=['outstanding_balance'])
-        #as amount_paid is modified above internally it need to be updated
+        #as amount_paid is modified above internally it needs to be updated
         instance.save(update_fields=['amount_paid'])
         
 
@@ -242,7 +242,7 @@ class ProductReturnViewSet(viewsets.ModelViewSet):
         """Calculate refund amount based on returned items"""
         refund_amount = sum(item.total_price for item in instance.items.all())
         instance.refund_amount = refund_amount
-        instance.save(update_fields=[refund_amount])
+        instance.save(update_fields=['refund_amount'])
     
     def _update_inventory(self, instance):
         """Update product stock levels immediately"""

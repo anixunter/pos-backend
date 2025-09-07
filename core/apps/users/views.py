@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from core.apps.users.models import User, Customer, CustomerDeposit
 from core.apps.users.serializers import UserSerializer, CustomerSerializer, CustomerDepositSerializer
-from core.apps.billing.models import SalesTransaction
-from core.apps.billing.serializers import SalesTransactionSerializer
+from core.apps.billing.models import SalesTransaction, ProductReturn
+from core.apps.billing.serializers import SalesTransactionSerializer, ProductReturnSerializer
 from core.apps.users.permissions import CustomUserPermission
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -106,6 +106,27 @@ class CustomerViewSet(viewsets.ModelViewSet):
         }
         
         return Response(balance_info)
+    
+    @action(detail=True, methods=['get'])
+    def return_history(self, request, pk=None):
+        """Get customer purchase history"""
+        try:
+            customer = self.get_object()
+        except Http404:
+            return Response(
+                {"error": "Customer not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        returns = ProductReturn.objects.select_related('transaction__customer').filter(transaction__customer=customer)
+        if not returns.exists():
+            return Response(
+                {"message": "No return history found for this customer."},
+                status=status.HTTP_200_OK
+            )
+        
+        serializer = ProductReturnSerializer(returns, many=True)
+        return Response(serializer.data)
                 
                 
 class CustomerDepositViewSet(viewsets.ModelViewSet):
