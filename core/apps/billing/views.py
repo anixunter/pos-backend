@@ -173,7 +173,7 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
         
         #apply existing customer credit (negative balance = credit)
         if customer.outstanding_balance <= 0:
-            available_credit = abs(customer.outsanding_balance)
+            available_credit = abs(customer.outstanding_balance)
             amount_owed = instance.total_amount - (instance.amount_paid or 0)
             
             if amount_owed > 0:
@@ -186,9 +186,9 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
         amount_owed = instance.total_amount - current_payment
         
         if amount_owed > 0:
-                customer.oustanding_balance += amount_owed
+                customer.outstanding_balance += amount_owed
         
-        customer.save(update_fields=['oustanding_balance'])
+        customer.save(update_fields=['outstanding_balance'])
         #as amount_paid is modified above internally it need to be updated
         instance.save(update_fields=['amount_paid'])
         

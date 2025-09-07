@@ -6,7 +6,8 @@ from rest_framework.decorators import action
 from core.apps.users.models import User, Customer, CustomerDeposit
 from core.apps.users.serializers import UserSerializer, CustomerSerializer, CustomerDepositSerializer
 from core.apps.billing.models import SalesTransaction
-from core.apps.users.permissions import IsAdmin, CustomUserPermission
+from core.apps.billing.serializers import SalesTransactionSerializer
+from core.apps.users.permissions import CustomUserPermission
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
