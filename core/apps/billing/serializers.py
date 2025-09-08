@@ -21,35 +21,6 @@ class SalesTransactionItemSerializer(serializers.ModelSerializer):
         return data
 
 
-class SalesTransactionSerializer(serializers.ModelSerializer):
-    items = SalesTransactionItemSerializer(many=True)
-    customer_name = serializers.CharField(source='customer.name', read_only=True, allow_null=True)
-    
-    class Meta:
-        model = SalesTransaction
-        fields = [
-            'id', 'customer', 'customer_name', 'transaction_date', 
-            'payment_method', 'subtotal', 'discount_amount', 'tax_amount', 
-            'total_amount', 'amount_paid', 'change_amount', 'notes', 'items'
-        ]
-        read_only_fields = [
-            'transaction_date', 'subtotal', 'tax_amount',
-            'total_amount', 'change_amount'
-        ]
-    
-    def validate(self, data):
-        # Validate payment for completed transactions
-        if data.get('payment_method') == SalesTransaction.PaymentMethodChoices.CASH:
-            if not data.get('amount_paid') or data.get('amount_paid', 0) <= 0:
-                raise serializers.ValidationError("Amount paid is required for cash payments")
-        
-        if data.get('payment_method') == SalesTransaction.PaymentMethodChoices.CREDIT:
-            if not data.get('customer'):
-                raise serializers.ValidationError("Customer is required for credit payments")
-        
-        return data
-
-
 class ProductReturnItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
@@ -63,12 +34,11 @@ class ProductReturnItemSerializer(serializers.ModelSerializer):
 
 class ProductReturnSerializer(serializers.ModelSerializer):
     items = ProductReturnItemSerializer(many=True)
-    transaction_id = serializers.IntegerField(source='transaction.id', read_only=True)
     
     class Meta:
         model = ProductReturn
         fields = [
-            'id', 'transaction', 'transaction_id', 'return_date', 
+            'id', 'transaction', 'return_date', 
             'reason', 'refund_amount', 'refund_method', 'notes', 'items'
         ]
         read_only_fields = ['return_date', 'refund_amount']
@@ -148,3 +118,31 @@ class ProductReturnSerializer(serializers.ModelSerializer):
         return data
 
 
+class SalesTransactionSerializer(serializers.ModelSerializer):
+    items = SalesTransactionItemSerializer(many=True)
+    returns = ProductReturnSerializer(many=True, read_only=True)
+    customer_name = serializers.CharField(source='customer.name', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = SalesTransaction
+        fields = [
+            'id', 'customer', 'customer_name', 'transaction_date', 
+            'payment_method', 'subtotal', 'discount_amount', 'tax_amount', 
+            'total_amount', 'amount_paid', 'change_amount', 'notes', 'items', 'returns'
+        ]
+        read_only_fields = [
+            'transaction_date', 'subtotal', 'tax_amount',
+            'total_amount', 'change_amount'
+        ]
+    
+    def validate(self, data):
+        # Validate payment for completed transactions
+        if data.get('payment_method') == SalesTransaction.PaymentMethodChoices.CASH:
+            if not data.get('amount_paid') or data.get('amount_paid', 0) <= 0:
+                raise serializers.ValidationError("Amount paid is required for cash payments")
+        
+        if data.get('payment_method') == SalesTransaction.PaymentMethodChoices.CREDIT:
+            if not data.get('customer'):
+                raise serializers.ValidationError("Customer is required for credit payments")
+        
+        return data

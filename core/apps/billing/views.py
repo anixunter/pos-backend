@@ -9,7 +9,7 @@ from core.apps.users.permissions import IsSuperUser, IsAdmin
 
 
 class SalesTransactionViewSet(viewsets.ModelViewSet):
-    queryset = SalesTransaction.objects.select_related('customer').prefetch_related('items__product')
+    queryset = SalesTransaction.objects.select_related('customer').prefetch_related('items__product', 'returns__items')
     serializer_class = SalesTransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
     

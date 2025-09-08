@@ -58,8 +58,8 @@ urlpatterns = [
     path("auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/token/verify/", TokenVerifyView.as_view(), name="token-verify"),
-    path('', include(router.urls)),
-]
+
+] + router.urls
 
 
 # Only add debug toolbar in development
