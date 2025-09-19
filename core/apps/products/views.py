@@ -39,7 +39,18 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action == 'adjust_stock':
             self.permission_classes = [IsSuperUser | IsAdmin]
         return [permission() for permission in self.permission_classes]
-        
+    
+    @extend_schema(
+        description="Adjust stock of the product",
+        examples=[
+            OpenApiExample(
+                "Example payload",
+                value={"adjustment_type": "Increase", "quantity": 1, "reason": "manual inspection"},
+                request_only=True,
+                description="adjustment_type is either Increase or Decrease"
+            )
+        ]
+    )    
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def adjust_stock(self, request, pk=None):
