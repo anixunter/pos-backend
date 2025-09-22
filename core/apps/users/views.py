@@ -3,6 +3,10 @@ from django.http import Http404
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+
+from drf_spectacular.utils import extend_schema, OpenApiExample
+from core.apps.users.utils import customer_purchase_history_response_example
+
 from core.apps.users.models import User, Customer, CustomerDeposit
 from core.apps.users.serializers import UserSerializer, CustomerSerializer, CustomerDepositSerializer
 from core.apps.billing.models import SalesTransaction, ProductReturn
@@ -28,6 +32,16 @@ class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example response",
+                value=customer_purchase_history_response_example,
+                response_only=True,
+                description="Purchase history of a customer"
+            )
+        ]
+    )
     @action(detail=True, methods=['get'])
     def purchase_history(self, request, pk=None):
         """Get customer purchase history"""
