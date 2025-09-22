@@ -78,6 +78,22 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(low_stock_products, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        description="Purchase price history of the products",
+        examples=[
+            OpenApiExample(
+                "Example response",
+                value={"product_id": 1, "product_name": "Example", "currrent_purchase_price": 100, "price_history": [{
+                    "purchase_price": 100,
+                    "effective_date": "2025-09-04T05:00:13.399397Z",
+                    "purchase_order": 1,
+                    "quantity_received": 10
+                    }]},
+                response_only=True,
+                description="purchase_order inside price_history is the foreign key"
+            )
+        ]
+    )
     @action(detail=True, methods=['get'])
     def price_history(self, request, pk=None):
         product = self.get_object()
