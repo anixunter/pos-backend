@@ -326,7 +326,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
 
 
 class InventoryAdjustmentViewSet(viewsets.ModelViewSet):
-    queryset = InventoryAdjustment.objects.select_related('product')
+    queryset = InventoryAdjustment.objects.select_related('product', 'created_by')
     serializer_class = InventoryAdjustmentSerializer
     permission_classes = [IsSuperUser | IsAdmin]
     

@@ -71,11 +71,11 @@ class ProductPurchasePriceHistorySerializer(serializers.ModelSerializer):
 
 class InventoryAdjustmentSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    adjusted_by = serializers.CharField(source='created_by.username', read_only=True)
     class Meta:
         model = InventoryAdjustment
         fields = ['id', 'product', 'product_name', 'adjustment_type', 'quantity', 
-            'reason', 'adjustment_date', 'created_by']
-        read_only_fields = ['created_by']
+            'reason', 'adjustment_date', 'adjusted_by']
 
 
 class AdjustStockSerializer(serializers.ModelSerializer):
