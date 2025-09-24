@@ -103,6 +103,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def balance_summary(self, request, pk=None):
+        # i dont know if this api is needed to be called because
+        # on the customer table we can see due amount directly
         """Get customer balance summary"""
         try:
             customer = self.get_object()
@@ -123,7 +125,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def return_history(self, request, pk=None):
-        """Get customer purchase history"""
+        # i dont know if this api is needed to be called because
+        # from the purchase history we can see the return for that purchase as well
+        """Get customer return history"""
         try:
             customer = self.get_object()
         except Http404:
