@@ -54,11 +54,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
             )
             
         transactions = SalesTransaction.objects.filter(customer=customer)
-        if not transactions.exists():
-            return Response(
-                {"message": "No purchase history found for this customer."},
-                status=status.HTTP_200_OK
-            )
+        # if not transactions.exists():
+        #     return Response(
+        #         {"message": "No purchase history found for this customer."},
+        #         status=status.HTTP_200_OK
+        #     )
         
         serializer = SalesTransactionSerializer(transactions, many=True)
         return Response(serializer.data)
